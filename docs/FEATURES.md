@@ -48,12 +48,11 @@ The targets version and release independently. These lists summarize the intende
 ### Azure DevOps v1.5.0
 
 - [ ] **Remove full sidebar dismissal and its restore launcher** — keep the sidebar's discoverable collapse/expand behavior instead of allowing it to enter a fully hidden state. Preserve the existing keyboard toggle and saved layout preferences.
+- [ ] **Collapse or expand all inline conversations** — add a Threads-toolbar toggle scoped to the current Markdown Preview while keeping comment badges and markers visible.
 
-No other scope is committed to v1.5.0 yet. Work-item creation, reactions, and sidebar quick reply remain later work.
+### GitHub v1.13.0
 
-### GitHub v1.12.0
-
-- [x] **Copy Markdown for every rendered comment** — ✅ GitHub v1.12.0. Copies only the original Markdown body, matching GitHub's native action without generated attribution, timestamps, links, or quote wrappers.
+- [ ] **Collapse or expand all inline conversations** — add a Threads-toolbar toggle across all currently rendered Markdown files while keeping comment badges and markers visible.
 
 ---
 
@@ -77,6 +76,7 @@ No other scope is committed to v1.5.0 yet. Work-item creation, reactions, and si
 | Render existing conversations beside the corresponding rendered block | ✅ | ✅ |
 | Mark table rows and code lines that contain conversations and navigate among multiple threads at the same position | ✅ GitHub v1.11.0 | ✅ ADO v1.3.0 |
 | Reply, resolve/reopen, edit or delete owned comments, and copy a stable link to any visible comment | ✅ GitHub v1.11.0 | ✅ ADO v1.4.0 |
+| Copy the original Markdown body of any visible comment | ✅ GitHub v1.12.0 | ✅ ADO v1.4.0 |
 | Show resolved state and collapse resolved threads by default | ✅ | ✅ |
 | Write with a Markdown toolbar, Write/Preview tabs, auto-grow, and Cmd/Ctrl+Enter | ✅ | ✅ |
 | Complete `@mention` names with keyboard and mouse selection and preserve host notifications | ✅ | ✅ ADO v1.2.0 |
@@ -171,11 +171,11 @@ No other scope is committed to v1.5.0 yet. Work-item creation, reactions, and si
   - **GitHub:** 📋 Planned; native reactions exist, but the mutation endpoint needs validation.
   - **ADO:** 📋 Planned; the native thread surface exposes a Like/thumbs-up action, but extension support needs endpoint investigation.
 
-- [x] **P2 — Copy a comment as Markdown**
-  - **Outcome:** reviewers can copy the original Markdown body of a comment for reuse in another discussion or document.
-  - **GitHub:** ✅ GitHub v1.12.0. Matches native **Copy Markdown** behavior.
-  - **ADO:** ✅ ADO v1.4.0. Added as a parity convenience even though it is absent from the captured native toolbar.
-  - **Constraint:** copy only the stored Markdown body. Do not add generated attribution, timestamps, links, or quote markers; keep this distinct from Copy link, which copies a navigable destination.
+- [ ] **P2 — Collapse or expand all inline conversations**
+  - **Outcome:** reviewers can return a comment-heavy rendered document to a compact reading view in one action, then reopen every conversation when needed.
+  - **GitHub:** 📋 Targeted for GitHub v1.13.0. Apply the action across all currently rendered Markdown files in the pull request.
+  - **ADO:** 📋 Targeted for ADO v1.5.0. Apply the action to the current Markdown Preview, matching ADO's one-file-at-a-time review surface.
+  - **Acceptance:** place a **Collapse all conversations** / **Expand all conversations** toggle in the Threads toolbar; collapse only conversation bodies while keeping badges, table-row markers, code-line markers, and the Threads list visible. Do not change resolution state, the unresolved filter, or saved sidebar preferences.
 
 - [ ] **P3 — Expose host-authorized moderation actions only when safely supported**
   - **GitHub:** ↔ Native **Hide** remains delegated to GitHub because availability and reason selection depend on repository moderation permissions.
