@@ -17,3 +17,6 @@ releases/
 test-results/
 playwright-report/
 last-e2e.log
+
+# Riptide workspace (cloud-synced) - never committed or pushed
+.humanlayer/

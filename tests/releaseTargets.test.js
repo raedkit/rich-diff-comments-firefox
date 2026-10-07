@@ -9,7 +9,7 @@ const ROOT = path.join(__dirname, '..');
 const read = (...parts) => fs.readFileSync(path.join(ROOT, ...parts), 'utf8');
 
 const packageScript = read('scripts', 'package.ps1');
-const syncScript = read('scripts', 'dev-sync.ps1');
+const syncScript = read('scripts', 'dev-sync.js');
 const preflightScript = read('.github', 'skills', 'rdc-publish-check', 'scripts', 'preflight.ps1');
 const prepScript = read('.github', 'skills', 'rdc-publish-check', 'scripts', 'release-prep.ps1');
 const releaseScript = read('.github', 'skills', 'rdc-publish-check', 'scripts', 'github-release.ps1');
@@ -34,6 +34,13 @@ test('release scripts require an explicit supported target contract', () => {
   assert.match(promoScript, /design\\logo\\ado\\icon-1024\.png/);
 });
 
+test('dev-sync supports only github and ado, defaulting to github', () => {
+  assert.match(syncScript, /TARGETS = \['github', 'ado'\]/);
+  assert.match(syncScript, /if \(i === -1\) return 'github'/);
+  const { TARGETS } = require('../scripts/dev-sync.js');
+  assert.deepEqual(TARGETS, ['github', 'ado']);
+});
+
 test('ADO package and release folder names cannot collide with GitHub artifacts', () => {
   assert.match(packageScript, /if \(\$Target -eq 'github'\) \{ 'rdc' \} else \{ "rdc-\$Target" \}/);
   assert.match(prepScript, /Join-Path \(Join-Path 'releases' \$Target\) \$version/);
@@ -43,7 +50,7 @@ test('ADO package and release folder names cannot collide with GitHub artifacts'
 });
 
 test('ADO sync and audit use the ADO-specific privacy policy and changelog', () => {
-  assert.match(syncScript, /if \(\$Target -eq 'ado'\) \{ 'PRIVACY_ADO\.md' \} else \{ 'PRIVACY\.md' \}/);
+  assert.match(syncScript, /target === 'ado' \? 'PRIVACY_ADO\.md' : 'PRIVACY\.md'/);
   assert.match(preflightScript, /if \(\$Target -eq 'ado'\) \{ 'CHANGELOG_ADO\.md' \} else \{ 'CHANGELOG\.md' \}/);
   assert.match(releaseScript, /if \(\$Target -eq 'ado'\) \{ 'CHANGELOG_ADO\.md' \} else \{ 'CHANGELOG\.md' \}/);
   assert.match(preflightScript, /Get-ChildItem "\$extPrefix\\src\\adapters" -Filter \*\.js -File -ErrorAction SilentlyContinue/);
@@ -121,6 +128,25 @@ test('GitHub and ADO manifests remain separately scoped', () => {
   assert.match(iconSource, /Fluent blue outer bubble\/frame \(#0078d4\)/);
   assert.match(iconSource, /White message interior/);
   assert.match(iconSource, /Fluent blue "M" and down arrow/);
+});
+
+test('manifests pin the Firefox (Gecko) identity and data-collection declaration', () => {
+  for (const [manifest, id] of [
+    [githubManifest, 'markdown-pr-github@raedkit-fork'],
+    [adoManifest, 'markdown-pr-ado@raedkit-fork']
+  ]) {
+    const gecko = manifest.browser_specific_settings.gecko;
+    assert.equal(gecko.id, id);
+    assert.equal(gecko.strict_min_version, '140.0');
+    assert.deepEqual(gecko.data_collection_permissions.required, ['none']);
+    // Android honours data_collection_permissions only from 142.
+    assert.equal(manifest.browser_specific_settings.gecko_android.strict_min_version, '142.0');
+  }
+  // Runtime-affecting keys stay as they were.
+  assert.equal(adoManifest.content_scripts[0].world, 'MAIN');
+  assert.equal(adoManifest.content_scripts[0].run_at, 'document_end');
+  assert.equal(githubManifest.permissions, undefined);
+  assert.equal(adoManifest.permissions, undefined);
 });
 
 test('ADO store forms disclose the correct public privacy policy and current package', () => {

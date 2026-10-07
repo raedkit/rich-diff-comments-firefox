@@ -7,6 +7,11 @@ Two separate Chrome/Edge extensions that let you leave **and view** inline pull-
 
 Install only the target you use; each package requests access solely to its own service.
 
+## Credits
+
+Original project: **Markdown PR Comments** by Chien Yuan Chang — <https://github.com/chienyuanchang/rich-diff-comments> (MIT).
+This fork ([raedkit/rich-diff-comments-firefox](https://github.com/raedkit/rich-diff-comments-firefox)) adds a Firefox build for personal use; all original features and design are the upstream author's work.
+
 ## Problem
 
 GitHub rich diff and Azure DevOps Preview render Markdown beautifully, but neither provides the complete block-level review workflow available in source diff. Reviewers otherwise switch views repeatedly to comment, find conversations, and scan what changed.

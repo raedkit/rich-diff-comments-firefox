@@ -16,6 +16,16 @@
     "https://dev.azure.com/*",
     "https://*.visualstudio.com/*"
   ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "markdown-pr-ado@raedkit-fork",
+      "strict_min_version": "140.0",
+      "data_collection_permissions": { "required": ["none"] }
+    },
+    "gecko_android": {
+      "strict_min_version": "142.0"
+    }
+  },
   "content_scripts": [
     {
       "matches": [
