@@ -10,6 +10,7 @@
     "test:e2e:github": "playwright test",
     "test:e2e:ado": "playwright test --config=playwright.ado.config.js",
     "test:e2e:all": "npm run test:e2e:github && npm run test:e2e:ado",
+    "test:e2e:firefox": "playwright test --project=firefox && playwright test --config=playwright.ado.config.js --project=firefox",
     "test:all": "npm test && npm run test:e2e:all",
     "sync": "node scripts/dev-sync.js",
     "package": "node scripts/package.js",

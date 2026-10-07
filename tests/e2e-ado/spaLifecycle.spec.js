@@ -81,7 +81,7 @@ test.describe('ADO SPA lifecycle and cross-file navigation', () => {
     ].every((key) => sessionStorage.getItem(key) == null));
     expect(cleared).toBe(true);
 
-    // Chromium reinjects manifest content scripts after the production reload;
+    // The browser reinjects manifest content scripts after the production reload;
     // the fixture mirrors that browser step explicitly.
     await injectAdoExtension(page);
     await waitForAdoReady(page, fixtures.DESIGN_PATH, userThreadCount(server.threads));
