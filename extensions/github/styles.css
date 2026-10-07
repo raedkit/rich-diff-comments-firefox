@@ -25,6 +25,9 @@
   opacity: 0;
   transition: opacity 0.15s;
   z-index: 100;
+  /* Dragging a `+` onto another `+` selects a range; the browser must not
+     treat that touch as a page scroll. */
+  touch-action: none;
 }
 
 .grdc-comment-btn svg {
@@ -191,6 +194,28 @@ pre.grdc-hoverable .grdc-comment-btn {
 li.grdc-hoverable .grdc-comment-btn {
   top: 4px;
   transform: none;
+}
+
+/* Touch screens have no hover, so the `+` can't wait for one: keep it
+   visible and give it a finger-sized target. `:hover` sticks after a tap on
+   touch, so the deepest-block rule above would otherwise hide the outer
+   block's `+` after tapping a nested item. */
+@media (hover: none) {
+  .grdc-comment-btn,
+  .grdc-hoverable:has(.grdc-hoverable:hover) > .grdc-comment-btn {
+    opacity: 0.6;
+    width: 28px;
+    height: 28px;
+  }
+}
+
+/* On a phone-width page the usual `left: -30px` gutter falls off-screen, so
+   overlay the `+` on the block's left edge instead. Cells and list items keep
+   their own, more specific positions above. */
+@media (hover: none) and (max-width: 767px) {
+  .grdc-comment-btn {
+    left: 2px;
+  }
 }
 
 /* ── Section collapse toggle (on headings H1–H6) ──────────────────────── */
@@ -1042,6 +1067,9 @@ li.grdc-hoverable .grdc-comment-btn {
   border-top-right-radius: 6px;
   cursor: move;
   user-select: none;
+  /* The header is the drag handle; a touch drag must move the sidebar, not
+     scroll the page. */
+  touch-action: none;
 }
 .grdc-sidebar-dragging {
   opacity: 0.85;

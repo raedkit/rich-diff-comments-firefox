@@ -312,7 +312,7 @@
   // pointer gesture is shared across every attached button.
   let dragState = null;
   // Set true briefly after a drag-drop so the button's `click` handler
-  // (which fires after mouseup) can distinguish "was drag, not click"
+  // (which fires after pointerup) can distinguish "was drag, not click"
   // and skip opening the single-line editor.
   let dragJustCompleted = false;
   const DRAG_THRESHOLD_PX = 4;
@@ -347,13 +347,16 @@
     // sync with the row under the cursor.
     btn.dataset.adrcLine = String(info.line);
 
-    // Multi-line drag: mousedown records the anchor, mousemove escalates
-    // to a drag once past DRAG_THRESHOLD_PX, mouseup on another `+`
-    // opens the range compose. A plain click (no movement past threshold)
-    // still opens the single-line compose via the click handler below.
+    // Multi-line drag: pointerdown records the anchor, pointermove escalates
+    // to a drag once past DRAG_THRESHOLD_PX, pointerup on another `+`
+    // opens the range compose. Pointer events cover mouse, touch and pen.
+    // A plain click/tap (no movement past threshold) still opens the
+    // single-line compose via the click handler below.
     btn.addEventListener('mousedown', (e) => {
-      if (e.button !== 0) return; // left button only
-      e.preventDefault(); // no text-selection during drag
+      if (e.button === 0) e.preventDefault(); // no text-selection during drag
+    });
+    btn.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return; // primary button / touch contact only
       // For code blocks, `btn.dataset.adrcLine` is kept in sync with the
       // hovered row by the sliding-button mousemove; using it here means
       // the drag anchor is the line the cursor was actually on, not the
@@ -365,19 +368,21 @@
         anchorInfo: info,
         anchorLine,
         anchorButton: btn,
+        pointerId: e.pointerId,
         startX: e.clientX,
         startY: e.clientY,
         isDragging: false,
         lastHighlighted: []
       };
-      document.addEventListener('mousemove', onDragMove);
-      document.addEventListener('mouseup', onDragEnd);
+      document.addEventListener('pointermove', onDragMove);
+      document.addEventListener('pointerup', onDragEnd);
+      document.addEventListener('pointercancel', onDragEnd);
     });
 
     btn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      // If the mouseup just fired a drag-completion, skip the click so
+      // If the pointerup just fired a drag-completion, skip the click so
       // we don't double-open (once for range, once for single-line).
       if (dragJustCompleted) {
         dragJustCompleted = false;
@@ -400,7 +405,7 @@
   // ── Drag handlers (multi-line range comments) ────────────────────────
 
   function onDragMove(e) {
-    if (!dragState) return;
+    if (!dragState || e.pointerId !== dragState.pointerId) return;
     const dx = e.clientX - dragState.startX;
     const dy = e.clientY - dragState.startY;
     if (!dragState.isDragging) {
@@ -434,17 +439,20 @@
   }
 
   function onDragEnd(e) {
-    document.removeEventListener('mousemove', onDragMove);
-    document.removeEventListener('mouseup', onDragEnd);
+    if (!dragState || e.pointerId !== dragState.pointerId) return;
+    document.removeEventListener('pointermove', onDragMove);
+    document.removeEventListener('pointerup', onDragEnd);
+    document.removeEventListener('pointercancel', onDragEnd);
     document.body.classList.remove('adrc-dragging');
 
     const state = dragState;
     dragState = null;
-    if (!state) return;
 
     // Always clear the highlight even if the drag was cancelled.
     state.lastHighlighted.forEach(b => b.classList.remove('adrc-range-hover'));
 
+    // A cancelled gesture (e.g. the browser took over the touch) never drops.
+    if (e.type === 'pointercancel') return;
     if (!state.isDragging) return; // plain click — let click handler take over
 
     // Drop target: a `.adrc-hoverable` block's host. Same-host is normally
@@ -2658,15 +2666,22 @@
   function wireSidebarDrag(panel) {
     const header = panel.querySelector('.adrc-sidebar-header');
     if (!header) return;
+    // Pointer events so the same drag works for mouse, touch and pen. The
+    // mousedown guard keeps the old mouse behaviour: no text selection and no
+    // focus loss from a textarea when grabbing the header.
     header.addEventListener('mousedown', (e) => {
+      if (e.button === 0 && !e.target.closest('button')) e.preventDefault();
+    });
+    header.addEventListener('pointerdown', (e) => {
       if (e.button !== 0 || e.target.closest('button')) return;
-      e.preventDefault();
       const rect = panel.getBoundingClientRect();
       const startX = e.clientX;
       const startY = e.clientY;
+      const pointerId = e.pointerId;
       panel.classList.add('adrc-sidebar-dragging');
 
       const onMove = (moveEvent) => {
+        if (moveEvent.pointerId !== pointerId) return;
         const GRDC = window.GRDC || {};
         const delta = { dx: moveEvent.clientX - startX, dy: moveEvent.clientY - startY };
         const pos = typeof GRDC.clampDragPos === 'function'
@@ -2675,15 +2690,18 @@
         panel.style.left = pos.left + 'px';
         panel.style.top = pos.top + 'px';
       };
-      const onUp = () => {
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup', onUp);
+      const onUp = (upEvent) => {
+        if (upEvent.pointerId !== pointerId) return;
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup', onUp);
+        document.removeEventListener('pointercancel', onUp);
         panel.classList.remove('adrc-sidebar-dragging');
         const finalRect = panel.getBoundingClientRect();
         saveSidebarState({ left: finalRect.left, top: finalRect.top });
       };
-      document.addEventListener('mousemove', onMove);
-      document.addEventListener('mouseup', onUp);
+      document.addEventListener('pointermove', onMove);
+      document.addEventListener('pointerup', onUp);
+      document.addEventListener('pointercancel', onUp);
     });
   }
 
