@@ -137,8 +137,8 @@ test('GitHub and ADO manifests remain separately scoped', () => {
     'https://dev.azure.com/*',
     'https://*.visualstudio.com/*'
   ]);
-  assert.equal(githubManifest.version, '1.12.0');
-  assert.equal(adoManifest.version, '1.4.0');
+  assert.equal(githubManifest.version, '1.13.0');
+  assert.equal(adoManifest.version, '1.5.0');
   assert.match(adoManifest.name, /Azure DevOps/);
   assert.doesNotMatch(githubManifest.name, /Azure DevOps/);
 
@@ -192,10 +192,16 @@ test('manifests pin the Firefox (Gecko) identity and data-collection declaration
 test('ADO store forms disclose the correct public privacy policy and current package', () => {
   for (const templateName of ['CHROME_SUBMISSION_ADO.md', 'EDGE_SUBMISSION_ADO.md']) {
     const template = read('.github', 'skills', 'rdc-publish-check', 'templates', templateName);
-    assert.match(template, /rdc-ado-1\.4\.0\.zip/);
+    assert.match(template, /rdc-ado-1\.5\.0\.zip/);
     assert.match(template, /PRIVACY_ADO\.md/);
     assert.match(template, /https:\/\/dev\.azure\.com\/\*/);
     assert.match(template, /https:\/\/\*\.visualstudio\.com\/\*/);
     assert.match(template, /not affiliated with, endorsed by, sponsored by, or otherwise connected to Microsoft Corporation/i);
   }
+});
+
+test('Firefox signing is an unlisted web-ext step and its output is git-ignored', () => {
+  const pkg = JSON.parse(read('package.json'));
+  assert.equal(pkg.scripts['sign:firefox'], 'web-ext sign --channel unlisted');
+  assert.match(read('.gitignore'), /^web-ext-artifacts\/$/m);
 });

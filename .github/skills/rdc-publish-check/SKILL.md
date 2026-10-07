@@ -21,7 +21,7 @@ This skill prepares either **Markdown PR — Markdown PR Comments for GitHub** o
 
 The Chrome Web Store rejected version 1.0.2 (May 2026) for declaring the `activeTab` permission without using it. The violation policy is [Use of Permissions](https://developer.chrome.com/docs/webstore/program-policies/permissions): *"Don't attempt to future-proof your Product by requesting a permission that might benefit services or features that have not yet been implemented."* The full policy context is in [docs/PUBLISHING.md → Chrome Web Store policies — quick reference](../../../docs/PUBLISHING.md#chrome-web-store-policies--quick-reference).
 
-The preflight script (`scripts/preflight.ps1`) implements the **policy-lens checks** from PUBLISHING.md as automated checks so we don't ship another rejection.
+The preflight script (`scripts/preflight.js`, run with `npm run preflight`) implements the **policy-lens checks** from PUBLISHING.md as automated checks so we don't ship another rejection.
 
 ## CHANGELOG / release-notes writing rules
 
@@ -58,26 +58,20 @@ Before preflight, confirm that [docs/FEATURES.md](../../../docs/FEATURES.md) rec
 
 From the repository root:
 
-```powershell
-.\.github\skills\rdc-publish-check\scripts\preflight.ps1 -Target github
-.\.github\skills\rdc-publish-check\scripts\preflight.ps1 -Target ado
-```
-
-Or with verbose output:
-
-```powershell
-.\.github\skills\rdc-publish-check\scripts\preflight.ps1 -Target ado -Verbose
+```bash
+npm run preflight -- --target github
+npm run preflight -- --target ado
 ```
 
 The script:
 
-1. **Reads `manifest.json`** and prints version + declared permissions.
-2. **Audits every `permissions` entry** against the codebase — greps for matching `chrome.<api>` calls. Any declared-but-unused permission fails the check (this is the rule that rejected 1.0.2).
-3. **Audits `host_permissions`** to confirm at least one `fetch()` / `XMLHttpRequest` call targets a matching URL.
-4. **Verifies required files** are present at expected paths (`content.js`, all `src/lib/*.js` declared in manifest, `styles.css`, `PRIVACY.md`, all four icon PNGs).
-5. **Runs the test suite** (`node --test tests/*.test.js`) and fails if any tests fail.
-6. **Checks the version hasn't shipped yet** — compares against git tags and the live version recorded in `docs/PUBLISHING.md`'s status table. Warns if the manifest version is `<=` the last shipped version (this would be rejected on upload).
-7. **Confirms the target changelog has a matching version entry**: `CHANGELOG.md` for GitHub or `CHANGELOG_ADO.md` for Azure DevOps. Missing entry = warning.
+1. **Syncs the target** (`npm run sync`) and **reads `manifest.json`**, checking `description` and the 128px icon.
+2. **Verifies required files** are present at expected paths (`content.js`, all `src/lib/*.js` declared in manifest, `styles.css`, `PRIVACY.md`, all four icon PNGs).
+3. **Runs `web-ext lint`** on the target folder (Mozilla's addons-linter) and fails on errors; warnings are counted and printed.
+4. **Runs the test suite** (`node --test tests/*.test.js`) and fails if any tests fail.
+5. **Confirms the target changelog has a matching version entry**: `CHANGELOG.md` for GitHub or `CHANGELOG_ADO.md` for Azure DevOps.
+
+No permissions are declared, so there is no `chrome.<api>` permission audit anymore, and the git-tag comparison was dropped. Check the version against the stores' live versions by hand (see `docs/PUBLISHING.md`'s status table).
 
 If everything passes, the script reports `READY TO PACKAGE` and exits 0. If any check fails, it reports the issue and exits non-zero.
 
@@ -85,13 +79,13 @@ If everything passes, the script reports `READY TO PACKAGE` and exits 0. If any 
 
 If preflight passes, run the packager:
 
-```powershell
-.\scripts\package.ps1                # defaults to -Target github
-.\scripts\package.ps1 -Target github  # explicit
-.\scripts\package.ps1 -Target ado     # separate ADO package
+```bash
+npm run package                      # defaults to --target github
+npm run package -- --target github   # explicit
+npm run package -- --target ado      # separate ADO package
 ```
 
-The packager runs `scripts/dev-sync.ps1` first, then zips only the target folder. Shared helpers are mirrored into both targets. GitHub receives root `PRIVACY.md`; ADO receives root `PRIVACY_ADO.md` under the packaged name `PRIVACY.md`. Outputs are `rdc-<version>.zip` for GitHub and `rdc-ado-<version>.zip` for ADO.
+The packager runs `scripts/dev-sync.js` first, then zips only the target folder with `web-ext build`. Shared helpers are mirrored into both targets. GitHub receives root `PRIVACY.md`; ADO receives root `PRIVACY_ADO.md` under the packaged name `PRIVACY.md`. Outputs are `rdc-<version>.zip` for GitHub and `rdc-ado-<version>.zip` for ADO.
 
 ### 3. Prepare the release folder (zip only)
 
@@ -106,7 +100,7 @@ This:
 
 1. Reads the version from `extensions/<target>/manifest.json`.
 2. Creates `releases/<version>/` for GitHub or `releases/ado/<version>/` for ADO. If the folder already exists, pass `-Force` to overwrite.
-3. Builds the zip via `package.ps1` (skippable with `-SkipBuild` if a zip already exists at the extension root) and **moves** the zip into the release folder.
+3. Builds the zip via `scripts/package.js` (skippable with `-SkipBuild` if a zip already exists at the extension root) and **moves** the zip into the release folder.
 
 Final folder layouts:
 
@@ -207,9 +201,9 @@ The script supports `-Width` / `-Height` (e.g. for the 640×400 option), `-Input
 
 The preflight script can also verify an existing zip:
 
-```powershell
-.\.github\skills\rdc-publish-check\scripts\preflight.ps1 -Target github -VerifyZip .\releases\1.4.0\rdc-1.4.0.zip
-.\.github\skills\rdc-publish-check\scripts\preflight.ps1 -Target ado -VerifyZip .\releases\ado\1.0.0\rdc-ado-1.0.0.zip
+```bash
+npm run preflight -- --target github --verify-zip releases/1.4.0/rdc-1.4.0.zip
+npm run preflight -- --target ado --verify-zip releases/ado/1.0.0/rdc-ado-1.0.0.zip
 ```
 
 This checks that:

@@ -49,7 +49,7 @@ The extension deliberately builds its own editor. GitHub's native form is mounte
 
 ### Activation after installation
 
-Chromium does not inject a newly installed content script into an already-open pull-request tab. Documentation currently tells users to refresh. A toolbar-badge prototype was rejected because new extension icons are usually hidden behind the extensions menu. An in-page prompt would require broader permissions and should be reconsidered only if user feedback shows the documentation is insufficient.
+Chromium does not inject a newly installed content script into an already-open pull-request tab. Documentation currently tells users to refresh. Firefox source suggests it injects into already-open tabs when an add-on is installed or enabled, but this has not been verified in a running Firefox (see [developer notes](./DEV_NOTES.md#firefox)). A toolbar-badge prototype was rejected because new extension icons are usually hidden behind the extensions menu. An in-page prompt would require broader permissions and should be reconsidered only if user feedback shows the documentation is insufficient.
 
 ## GitHub-specific delegation
 

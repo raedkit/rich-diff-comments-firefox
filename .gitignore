@@ -16,6 +16,9 @@ releases/
 # Zips built by `npm run package` at the repo root
 rdc-*.zip
 
+# Signed Firefox builds and web-ext output (`npm run sign:firefox`)
+web-ext-artifacts/
+
 # Playwright e2e test artifacts (traces, screenshots, reports)
 test-results/
 playwright-report/

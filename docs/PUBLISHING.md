@@ -262,9 +262,9 @@ Build the publishable zip from the repo root. The store wants the manifest at th
 
 Target-safe commands:
 
-```powershell
-.\scripts\package.ps1 -Target github  # rdc-<version>.zip
-.\scripts\package.ps1 -Target ado     # rdc-ado-<version>.zip
+```bash
+npm run package -- --target github  # rdc-<version>.zip
+npm run package -- --target ado     # rdc-ado-<version>.zip
 ```
 
 ADO uses a target-qualified filename and `releases/ado/<version>/` so its first
@@ -290,8 +290,8 @@ Do not hand-build or hand-edit the zip. The checked-in packager synchronizes sha
 
 After release prep, verify the selected target package:
 
-```powershell
-.\.github\skills\rdc-publish-check\scripts\preflight.ps1 -Target ado -VerifyZip .\releases\ado\1.3.0\rdc-ado-1.3.0.zip
+```bash
+npm run preflight -- --target ado --verify-zip releases/ado/1.3.0/rdc-ado-1.3.0.zip
 ```
 
 Verification checks the packaged target identity and hosts, top-level manifest, declared scripts/styles/icons, privacy policy, and absence of development-only files.
