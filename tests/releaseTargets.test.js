@@ -8,9 +8,9 @@ const path = require('node:path');
 const ROOT = path.join(__dirname, '..');
 const read = (...parts) => fs.readFileSync(path.join(ROOT, ...parts), 'utf8');
 
-const packageScript = read('scripts', 'package.ps1');
+const packageScript = read('scripts', 'package.js');
 const syncScript = read('scripts', 'dev-sync.js');
-const preflightScript = read('.github', 'skills', 'rdc-publish-check', 'scripts', 'preflight.ps1');
+const preflightScript = read('.github', 'skills', 'rdc-publish-check', 'scripts', 'preflight.js');
 const prepScript = read('.github', 'skills', 'rdc-publish-check', 'scripts', 'release-prep.ps1');
 const releaseScript = read('.github', 'skills', 'rdc-publish-check', 'scripts', 'github-release.ps1');
 const promoScript = read('design', 'promo-tiles', 'generate.ps1');
@@ -18,10 +18,20 @@ const promoScript = read('design', 'promo-tiles', 'generate.ps1');
 const githubManifest = JSON.parse(read('extensions', 'github', 'manifest.json'));
 const adoManifest = JSON.parse(read('extensions', 'ado', 'manifest.json'));
 
-test('release scripts require an explicit supported target contract', () => {
+test('Node scripts require an explicit supported target contract', () => {
   for (const [name, script] of [
-    ['package.ps1', packageScript],
-    ['preflight.ps1', preflightScript],
+    ['package.js', packageScript],
+    ['preflight.js', preflightScript]
+  ]) {
+    assert.match(script, /require\(.*dev-sync\.js'?\)/, `${name} must reuse the dev-sync TARGETS list`);
+    assert.match(script, /--target/, `${name} must take a --target argument`);
+    assert.match(script, /argValue\([^)]*'--target'\) \?\? 'github'/, `${name} must preserve GitHub as the backward-compatible default`);
+    assert.match(script, /TARGETS\.includes\(target\)/, `${name} must reject unsupported targets`);
+  }
+});
+
+test('PowerShell release scripts require an explicit supported target contract', () => {
+  for (const [name, script] of [
     ['release-prep.ps1', prepScript],
     ['github-release.ps1', releaseScript]
   ]) {
@@ -42,7 +52,7 @@ test('dev-sync supports only github and ado, defaulting to github', () => {
 });
 
 test('ADO package and release folder names cannot collide with GitHub artifacts', () => {
-  assert.match(packageScript, /if \(\$Target -eq 'github'\) \{ 'rdc' \} else \{ "rdc-\$Target" \}/);
+  assert.match(packageScript, /target === 'github' \? 'rdc' : `rdc-\$\{target\}`/);
   assert.match(prepScript, /Join-Path \(Join-Path 'releases' \$Target\) \$version/);
   assert.match(prepScript, /\$artifactStem = if \(\$Target -eq 'github'\) \{ 'rdc' \} else \{ "rdc-\$Target" \}/);
   assert.match(releaseScript, /"releases\\\$Target\\\$version"/);
@@ -51,21 +61,19 @@ test('ADO package and release folder names cannot collide with GitHub artifacts'
 
 test('ADO sync and audit use the ADO-specific privacy policy and changelog', () => {
   assert.match(syncScript, /target === 'ado' \? 'PRIVACY_ADO\.md' : 'PRIVACY\.md'/);
-  assert.match(preflightScript, /if \(\$Target -eq 'ado'\) \{ 'CHANGELOG_ADO\.md' \} else \{ 'CHANGELOG\.md' \}/);
+  assert.match(preflightScript, /target === 'ado' \? 'CHANGELOG_ADO\.md' : 'CHANGELOG\.md'/);
   assert.match(releaseScript, /if \(\$Target -eq 'ado'\) \{ 'CHANGELOG_ADO\.md' \} else \{ 'CHANGELOG\.md' \}/);
-  assert.match(preflightScript, /Get-ChildItem "\$extPrefix\\src\\adapters" -Filter \*\.js -File -ErrorAction SilentlyContinue/);
-  assert.match(preflightScript, /packaged manifest identity differs from extensions\/\$Target\/manifest\.json/);
-  assert.match(preflightScript, /packaged host permissions match the \$Target target/);
+  assert.match(preflightScript, /packaged manifest identity differs from extensions\/\$\{target\}\/manifest\.json/);
+  assert.match(preflightScript, /packaged host permissions match the \$\{target\} target/);
   assert.match(preflightScript, /all declared icons are in the zip/);
   assert.match(preflightScript, /target privacy policy is in the zip/);
-  assert.match(preflightScript, /\$testResult -join "`n"/);
-  assert.match(preflightScript, /if \(\$testText -match '\(\?m\)\\bpass\\s\+\(\\d\+\)'\)/);
-  assert.match(preflightScript, /else \{ 'all tests' \}/);
+  assert.match(preflightScript, /pass\\s\+\(\\d\+\)/);
+  assert.match(preflightScript, /'all tests'/);
+  assert.match(syncScript, /src', 'adapters', `\$\{target\}\.js`/);
 });
 
 test('ADO release uses a target-qualified tag and submission documents', () => {
   assert.match(releaseScript, /if \(\$Target -eq 'github'\) \{ "v\$version" \} else \{ "\$Target-v\$version" \}/);
-  assert.match(preflightScript, /if \(\$Target -eq 'github'\) \{ 'v' \} else \{ "\$Target-v" \}/);
   assert.match(releaseScript, /\$ErrorActionPreference = 'Continue'[\s\S]*?gh release view \$tag 2>&1[\s\S]*?\$releaseViewExit = \$LASTEXITCODE/);
   assert.match(releaseScript, /if \(\$releaseViewExit -eq 0\)/);
   assert.match(releaseScript, /\[System\.IO\.File\]::ReadAllText\(\$changelogPath, \[System\.Text\.Encoding\]::UTF8\)/);
@@ -76,9 +84,8 @@ test('ADO release uses a target-qualified tag and submission documents', () => {
   assert.equal(fs.existsSync(path.join(ROOT, '.github', 'skills', 'rdc-publish-check', 'templates', 'EDGE_SUBMISSION_ADO.md')), true);
 });
 
-test('release scripts preserve non-ASCII manifest names in Windows PowerShell', () => {
+test('release scripts preserve non-ASCII manifest names', () => {
   for (const [name, script] of [
-    ['preflight.ps1', preflightScript],
     ['release-prep.ps1', prepScript],
     ['github-release.ps1', releaseScript]
   ]) {
@@ -88,7 +95,40 @@ test('release scripts preserve non-ASCII manifest names in Windows PowerShell', 
       `${name} must decode manifest.json as UTF-8`
     );
   }
-  assert.match(preflightScript, /StreamReader\(\$manifestEntry\.Open\(\), \[System\.Text\.Encoding\]::UTF8\)/);
+  for (const [name, script] of [
+    ['package.js', packageScript],
+    ['preflight.js', preflightScript]
+  ]) {
+    assert.match(script, /readFileSync\(.*'utf8'\)/, `${name} must decode files as UTF-8`);
+  }
+  assert.match(preflightScript, /toString\('utf8'\)/, 'preflight.js must decode the zipped manifest as UTF-8');
+});
+
+test('release-prep builds through the Node packager', () => {
+  assert.match(prepScript, /node \(Join-Path \$root "scripts\\package\.js"\) --target \$Target/);
+  assert.doesNotMatch(prepScript, /package\.ps1/);
+});
+
+test('PowerShell build scripts were replaced by Node ports', () => {
+  for (const gone of [
+    ['scripts', 'dev-sync.ps1'],
+    ['scripts', 'package.ps1'],
+    ['.github', 'skills', 'rdc-publish-check', 'scripts', 'preflight.ps1']
+  ]) {
+    assert.equal(fs.existsSync(path.join(ROOT, ...gone)), false, `${gone.join('/')} must stay removed`);
+  }
+});
+
+test('preflight denylist blocks dev-only paths from the package', () => {
+  for (const prefix of ['tests/', 'docs/', 'node_modules/', '.github/', 'design/', 'local-only/', '.git/', 'package.json']) {
+    assert.ok(preflightScript.includes(`'${prefix}'`), `denylist must contain ${prefix}`);
+  }
+});
+
+test('package.js zips through web-ext build with target-qualified names', () => {
+  assert.match(packageScript, /'build'/);
+  assert.match(packageScript, /'--filename'/);
+  assert.match(packageScript, /'--overwrite-dest'/);
 });
 
 test('GitHub and ADO manifests remain separately scoped', () => {

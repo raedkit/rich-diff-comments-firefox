@@ -13,14 +13,14 @@
 #
 # Usage:
 #   .\.github\skills\rdc-publish-check\scripts\release-prep.ps1 -Target github|ado
-#       Builds the zip (via package.ps1), creates the target release folder,
+#       Builds the zip (via package.js), creates the target release folder,
 #       and moves the target-qualified zip into it.
 #
 #   .\.github\skills\rdc-publish-check\scripts\release-prep.ps1 -Force
 #       Overwrites releases/<version>/ if it already exists.
 #
 #   .\.github\skills\rdc-publish-check\scripts\release-prep.ps1 -SkipBuild
-#       Skips running package.ps1 (assumes the target zip already exists).
+#       Skips running package.js (assumes the target zip already exists).
 
 [CmdletBinding()]
 param(
@@ -68,10 +68,10 @@ try {
   $zipAtRoot = Join-Path $root $zipName
 
   if (-not $SkipBuild) {
-    Write-Host "  building $zipName via .\scripts\package.ps1" -ForegroundColor Cyan
-    & (Join-Path $root "scripts\package.ps1") -Target $Target | Out-Host
+    Write-Host "  building $zipName via node scripts/package.js" -ForegroundColor Cyan
+    & node (Join-Path $root "scripts\package.js") --target $Target | Out-Host
     if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne $null) {
-      throw "package.ps1 failed (exit $LASTEXITCODE)"
+      throw "package.js failed (exit $LASTEXITCODE)"
     }
   }
 
