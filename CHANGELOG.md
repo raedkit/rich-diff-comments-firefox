@@ -4,6 +4,12 @@ All notable changes to Markdown PR Comments for GitHub (formerly *Rich Diff Comm
 
 ## [Unreleased]
 
+## [1.13.1] — 2026-10-09
+
+### Fixed
+
+- **On phones, the + button no longer sits on top of the text.** It stays in the left margin, next to the content, as on desktop.
+
 ## [1.13.0] — 2026-10-08
 
 ### Added
