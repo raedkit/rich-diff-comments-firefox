@@ -18,11 +18,32 @@ Adds inline review-comment buttons and navigation to rendered Markdown in pull r
 
 That's it. The extension is now installed. No login, no setup, no token required.
 
+## Install in Firefox (personal build)
+
+There is no public Firefox listing. Release Firefox only keeps Mozilla-signed add-ons across restarts, so this fork builds a signed **unlisted** `.xpi` that you install from a file. Requires Firefox 140 or newer (Firefox for Android: 142 or newer).
+
+1. Clone the repo and run `npm install`.
+2. Sign the target you want (get API credentials at <https://addons.mozilla.org/developers/addon/api/key/>):
+
+   ```bash
+   export WEB_EXT_API_KEY=...      # AMO "JWT issuer"
+   export WEB_EXT_API_SECRET=...   # AMO "JWT secret"
+   npm run sync -- --target github         # or: --target ado
+   npm run sign:firefox -- --source-dir extensions/github
+   ```
+
+   The signed file lands in `web-ext-artifacts/`. Each new upload needs a higher version in the target's `manifest.json`.
+3. In Firefox open `about:addons` → the gear menu → **Install Add-on From File…** → pick the `.xpi`.
+
+To try a build without signing, use `npx web-ext run --source-dir extensions/github` (temporary install, removed when Firefox closes). See the README's [Firefox build](README.md#firefox-build) section.
+
+On touch screens the **`+`** button is always visible and one tap starts a comment. Touch input on Firefox for Android has not yet been checked on a real device.
+
 ## Just installed?
 
 If you installed either extension while a matching GitHub or Azure DevOps PR was **already open in another tab**, the inline `+` buttons and sidebar won't appear on that tab until you reload it. **Hard-refresh** the tab with **Ctrl+Shift+R** (Windows / Linux) or **Cmd+Shift+R** (macOS) to activate the extension.
 
-Tabs you open *after* installing work automatically — the tip above only matters for tabs that were already loaded.
+Tabs you open *after* installing work automatically — the tip above only matters for tabs that were already loaded. (In Firefox this may not be needed, but it has not been verified; refresh if the buttons don't show.)
 
 ## How to use it on GitHub
 

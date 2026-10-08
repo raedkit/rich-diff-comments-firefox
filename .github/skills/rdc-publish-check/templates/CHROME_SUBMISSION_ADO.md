@@ -10,7 +10,7 @@ Version 1.4.0 adds actions to copy a direct link or the original Markdown from a
 
 ## Package
 
-- **Zip:** `rdc-ado-1.4.0.zip`
+- **Zip:** `rdc-ado-1.5.0.zip`
 - **Manifest version:** `1.4.0`
 - **Release folder:** `releases/ado/1.4.0/`
 

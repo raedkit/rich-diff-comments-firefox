@@ -2,7 +2,7 @@
 local-only/
 
 # Extension build output — src/lib/ and PRIVACY.md are mirrored into each
-# extensions/<target>/ folder by scripts/dev-sync.ps1 so Chrome can load
+# extensions/<target>/ folder by scripts/dev-sync.js so Chrome can load
 # the folder directly. Source of truth stays at the repo root.
 extensions/*/src/
 extensions/*/PRIVACY.md
@@ -13,7 +13,16 @@ node_modules/
 # Release artifacts — reproducible via release-prep.ps1
 releases/
 
+# Zips built by `npm run package` at the repo root
+rdc-*.zip
+
+# Signed Firefox builds and web-ext output (`npm run sign:firefox`)
+web-ext-artifacts/
+
 # Playwright e2e test artifacts (traces, screenshots, reports)
 test-results/
 playwright-report/
 last-e2e.log
+
+# Riptide workspace (cloud-synced) - never committed or pushed
+.humanlayer/

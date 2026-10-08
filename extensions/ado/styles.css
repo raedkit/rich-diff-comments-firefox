@@ -118,6 +118,9 @@ body.adrc-theme-host {
   opacity: 0;
   transition: opacity 0.15s;
   z-index: 100;
+  /* Dragging a `+` onto another `+` selects a range; the browser must not
+     treat that touch as a page scroll. */
+  touch-action: none;
 }
 
 .adrc-comment-btn:hover {
@@ -282,6 +285,23 @@ li.adrc-hoverable .adrc-comment-btn {
   line-height: inherit;
   top: calc((1lh - 22px) / 2);
   transform: none;
+}
+
+/* Touch screens have no hover, so the `+` can't wait for one: keep it
+   visible and give it a finger-sized target. `:hover` sticks after a tap on
+   touch, so the deepest-block rule above would otherwise hide the outer
+   block's `+` after tapping a nested item. */
+@media (hover: none) {
+  .adrc-comment-btn,
+  .adrc-hoverable:has(.adrc-hoverable:hover) > .adrc-comment-btn {
+    opacity: 0.6;
+    width: 28px;
+    height: 28px;
+  }
+
+  li.adrc-hoverable .adrc-comment-btn {
+    top: calc((1lh - 28px) / 2);
+  }
 }
 
 /* Persistent rendered-diff context. ADO Preview contains only the head
@@ -525,6 +545,9 @@ body.adrc-dragging {
   cursor: grab;
   flex-shrink: 0;
   white-space: nowrap;
+  /* The header is the drag handle; a touch drag must move the sidebar, not
+     scroll the page. */
+  touch-action: none;
 }
 
 .adrc-sidebar-separator {

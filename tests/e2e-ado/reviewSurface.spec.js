@@ -350,24 +350,24 @@ test.describe('ADO rendered review surface', () => {
     expect(startBox).not.toBeNull();
     expect(endBox).not.toBeNull();
 
+    // Real mouse input: page.mouse.* emits pointerdown/move/up, which is what
+    // the drag gesture listens to (touch takes the same path).
     const startPoint = {
-      clientX: startBox.x + startBox.width / 2,
-      clientY: startBox.y + startBox.height / 2,
+      x: startBox.x + startBox.width / 2,
+      y: startBox.y + startBox.height / 2,
     };
-    // The circular button hangs in a gutter. Dispatch directly to its host
-    // (as the GitHub fixture tests do for gutter clicks), then use real mouse
-    // movement/drop for document.elementFromPoint range resolution.
-    await startButton.dispatchEvent('mousedown', Object.assign({ button: 0 }, startPoint));
     const endPoint = {
-      clientX: endBox.x + endBox.width / 2,
-      clientY: endBox.y + endBox.height / 2,
+      x: endBox.x + endBox.width / 2,
+      y: endBox.y + endBox.height / 2,
     };
-    await page.mouse.move(endPoint.clientX, endPoint.clientY, { steps: 8 });
+    await page.mouse.move(startPoint.x, startPoint.y);
+    await page.mouse.down();
+    await page.mouse.move(endPoint.x, endPoint.y, { steps: 8 });
     await expect(page.locator('body')).toHaveClass(/adrc-dragging/);
     expect(await page.evaluate(({ x, y }) =>
       document.elementFromPoint(x, y)?.closest('.adrc-hoverable')?.dataset.adrcLine,
-    { x: endPoint.clientX, y: endPoint.clientY })).toBe('9');
-    await endHost.dispatchEvent('mouseup', Object.assign({ button: 0, bubbles: true }, endPoint));
+    endPoint)).toBe('9');
+    await page.mouse.up();
 
     const editor = page.locator('.adrc-compose-editor');
     await expect(editor).toBeVisible();

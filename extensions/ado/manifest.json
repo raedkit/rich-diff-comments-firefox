@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Markdown PR — Azure DevOps PR Comments",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Comment on rendered Markdown in Azure DevOps PRs with inline threads, Changes, Outline, and keyboard navigation.",
   "author": "chienyuanchang",
 
@@ -16,6 +16,16 @@
     "https://dev.azure.com/*",
     "https://*.visualstudio.com/*"
   ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "markdown-pr-ado@raedkit-fork",
+      "strict_min_version": "140.0",
+      "data_collection_permissions": { "required": ["none"] }
+    },
+    "gecko_android": {
+      "strict_min_version": "142.0"
+    }
+  },
   "content_scripts": [
     {
       "matches": [

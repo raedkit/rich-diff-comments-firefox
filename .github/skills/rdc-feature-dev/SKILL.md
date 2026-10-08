@@ -87,8 +87,8 @@ When the feature is working, before declaring done:
 
 1. **Identify pure logic** that was inlined in `content.js`. If it has clear inputs/outputs and no DOM/fetch, lift it to `src/lib/<area>.js`.
 2. **Add unit tests** in `tests/<area>.test.js` using Node's built-in `node:test`. Cover happy paths, boundaries, defensive null/invalid input. Aim for 5–15 tests per helper.
-3. **Register new lib files** in every target manifest that consumes them. Run `.\scripts\dev-sync.ps1 -Target github` and/or `-Target ado` so the browser dev-load folders receive the shared source. (`package.ps1` and `preflight.ps1` synchronize automatically.)
-4. **Re-run all tests:** `node --test (Get-ChildItem tests/*.test.js)` should be 100% green.
+3. **Register new lib files** in every target manifest that consumes them. Run `npm run sync -- --target github` and/or `--target ado` so the browser dev-load folders receive the shared source. (`npm run package` and `npm run preflight` synchronize automatically.)
+4. **Re-run all tests:** `npm test` should be 100% green.
 5. **Re-run manual tests** against the affected target's developer notes and release checklist.
 
 The goal isn't 100% coverage — it's "every algorithm a future change might break has a regression test."

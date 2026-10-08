@@ -1,11 +1,16 @@
 # Markdown PR Comments for GitHub and Azure DevOps
 
-Two separate Chrome/Edge extensions that let you leave **and view** inline pull-request review comments directly in rendered Markdown:
+Two separate Chrome/Edge/Firefox extensions that let you leave **and view** inline pull-request review comments directly in rendered Markdown:
 
 - **Markdown PR — Markdown PR Comments for GitHub** targets GitHub rich diff.
 - **Markdown PR — Azure DevOps PR Comments** targets Azure DevOps Preview mode.
 
 Install only the target you use; each package requests access solely to its own service.
+
+## Credits
+
+Original project: **Markdown PR Comments** by Chien Yuan Chang — <https://github.com/chienyuanchang/rich-diff-comments> (MIT).
+This fork ([raedkit/rich-diff-comments-firefox](https://github.com/raedkit/rich-diff-comments-firefox)) adds a Firefox build for personal use; all original features and design are the upstream author's work.
 
 ## Problem
 
@@ -57,6 +62,8 @@ See the shared [feature parity roadmap](docs/FEATURES.md) for both targets and t
 - **Chrome / Brave / Vivaldi / Arc / any Chromium browser:** <https://chromewebstore.google.com/detail/markdown-pr-comments-for/bdkcmcdfnhonfcpdgcmemkpcmnhnhemj> — short link: <https://aka.ms/md-pr>
 - **Microsoft Edge:** <https://microsoftedge.microsoft.com/addons/detail/agomibenjlnikaldoddminkjbokfocgb>
 
+**Firefox (140 or newer, including Firefox for Android 142+):** this fork builds a Mozilla-signed unlisted `.xpi` for personal use; there is no public Firefox listing. See [Firefox build](#firefox-build) below and [INSTALL.md → Firefox](INSTALL.md#install-in-firefox-personal-build).
+
 No separate login, setup, or Personal Access Token is required. See [INSTALL.md](INSTALL.md) for both walkthroughs.
 
 > 📌 **Just installed?** Hard-refresh (Ctrl+Shift+R / Cmd+Shift+R) any GitHub or Azure DevOps PR tab that was already open when you installed — see [INSTALL.md → Just installed?](INSTALL.md#just-installed).
@@ -71,7 +78,33 @@ No separate login, setup, or Personal Access Token is required. See [INSTALL.md]
   - **Azure DevOps:** `extensions/ado/`
 5. Open a pull request's changed-files view. Select rich diff for a GitHub Markdown file, or use the Azure DevOps sidebar's **Open Markdown Preview** action.
 
-After editing a target's content script, click the reload icon on the extension card and hard-refresh the PR (Ctrl+Shift+R). If you edit anything under `src/lib/`, run `.\scripts\dev-sync.ps1 -Target github` or `-Target ado` first, then reload that extension.
+Load unpacked needs the shared helpers mirrored into the target folder first: `npm install` once, then `npm run sync -- --target github` (or `--target ado`).
+
+After editing a target's content script, click the reload icon on the extension card and hard-refresh the PR (Ctrl+Shift+R). If you edit anything under `src/lib/`, run `npm run sync -- --target github` or `--target ado` first, then reload that extension.
+
+### Firefox build
+
+Dev loop (temporary install, auto-reloads on change; works on macOS, Linux, and Windows):
+
+```bash
+npm install
+npm run sync -- --target github          # or: --target ado
+npx web-ext run --source-dir extensions/github
+```
+
+Use `--firefox-profile <name> --keep-profile-changes` to reuse a profile that is already signed in to GitHub or Azure DevOps. Lint with `npm run lint:firefox -- --source-dir extensions/<target>` (also run by `npm run preflight`).
+
+Permanent install on release Firefox needs a Mozilla-signed add-on. Sign an unlisted build (no public AMO page; only automated validation) with API credentials from <https://addons.mozilla.org/developers/addon/api/key/>:
+
+```bash
+export WEB_EXT_API_KEY=...      # AMO "JWT issuer"; never commit these
+export WEB_EXT_API_SECRET=...   # AMO "JWT secret"
+npm run preflight -- --target github
+npm run sign:firefox -- --source-dir extensions/github
+# -> web-ext-artifacts/<name>-<version>.xpi
+```
+
+Then in Firefox open `about:addons` → gear → **Install Add-on From File…** and pick the `.xpi`. Each upload needs a new manifest version. Repeat per target. Signed `.xpi` files stay in the git-ignored `web-ext-artifacts/` folder.
 
 ## Usage
 
@@ -83,14 +116,14 @@ After editing a target's content script, click the reload icon on the extension 
 ## Files
 
 ```
-extensions/github/     Chrome / Edge load unpacked from here
+extensions/github/     Chrome / Edge / Firefox load from here
   manifest.json           Extension manifest (Manifest V3)
   content.js              Main content script (DOM + fetch glue)
   styles.css              Comment button and box styles
   icons/                  Extension icons
   src/lib/                Mirrored from repo-root src/lib (git-ignored)
   PRIVACY.md              Mirrored from repo-root PRIVACY.md (git-ignored)
-extensions/ado/        Separate Azure DevOps Chrome / Edge extension
+extensions/ado/        Separate Azure DevOps Chrome / Edge / Firefox extension
   manifest.json           ADO-only hosts and package metadata
   content.js              ADO Preview, REST, comments, and navigation UI
   styles.css              Fluent light/dark/high-contrast interface
@@ -104,8 +137,8 @@ src/lib/               Shared pure helpers — source of truth
   markdownPreview.js      offline markdown → HTML for the Preview tab
   codeBlocks.js           fence detection + thread-head sorting
 scripts/
-  package.ps1             Build the publish zip (-Target github|ado)
-  dev-sync.ps1            Mirror src/lib + PRIVACY.md into extensions/<target>/
+  package.js              Build the publish zip (npm run package -- --target github|ado)
+  dev-sync.js             Mirror src/lib + PRIVACY.md into extensions/<target>/ (npm run sync)
 tests/                 Node test runner specs (`npm test`)
 test_md_files/         Synthetic Markdown fixture for manual rich-diff testing
 docs/github/APPROACH.md   GitHub strategy and design choices
@@ -123,13 +156,14 @@ docs/PUBLISHING.md     Store submission and release workflow
 All suites are local — no live GitHub or Azure DevOps calls.
 
 ```bash
-npm install         # one-time: fetches jsdom + @playwright/test (devDeps only)
-npx playwright install chromium    # one-time: ~150 MB Chromium for e2e tests
+npm install         # one-time: fetches jsdom, @playwright/test, web-ext (devDeps only)
+npx playwright install chromium firefox    # one-time: browsers for e2e tests
 
 npm test                  # 410 unit/static tests (Node:test + jsdom)
 npm run test:e2e          # 21 GitHub Playwright fixtures
 npm run test:e2e:ado      # 63 ADO Preview + mocked REST Playwright fixtures
-npm run test:e2e:all      # both browser targets
+npm run test:e2e:all      # both browser targets, in Chromium and Firefox
+npm run test:e2e:firefox  # Firefox project only
 npm run test:all          # Node tests plus both browser targets
 ```
 
@@ -143,12 +177,12 @@ GitHub network mutations remain covered by the [manual test checklist](docs/gith
 
 ## Packaging a release
 
-Build a publish-ready zip for the Chrome Web Store / Edge Add-ons:
+Build a publish-ready zip for the Chrome Web Store / Edge Add-ons (the same zip also validates for addons.mozilla.org):
 
-```powershell
+```bash
 # From this folder
-.\scripts\package.ps1
-.\scripts\package.ps1 -Target ado
+npm run package -- --target github
+npm run package -- --target ado
 # → rdc-<version>.zip for GitHub; rdc-ado-<version>.zip for ADO
 ```
 

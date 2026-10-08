@@ -480,6 +480,30 @@ The action is a sidebar header button (book icon) **and** a CTA in the empty-sta
 
 The sidebar used to auto-hide when the user toggled to source-diff view; 1.0.3 removed that so the sidebar stays available on either view. A click listener on rich/source-diff toggles still re-runs `buildThreadsSidebar` after a 100 ms delay so any newly-rendered threads appear immediately when toggling back to rich-diff. The Threads pane natively goes empty when no rich-diff is visible (no `.grdc-existing-thread` elements exist) and the empty-state CTA takes over.
 
+## Firefox
+
+Firefox support (GitHub 1.13.0) changed only manifest metadata (`browser_specific_settings.gecko` / `gecko_android`) and the pointer/touch handling; the content script is otherwise unchanged and still uses only web-platform APIs.
+
+**Verified**
+
+- On Floorp (a Firefox 156-based browser), after loading the synced `extensions/github/` folder as a temporary add-on, the GitHub extension works and the `+` button appears on a rich diff.
+
+**Not yet verified in a running Firefox** (do not treat as fact; the research notes only infer these from Firefox source and bug trackers)
+
+- Whether a PR tab that was already open when the add-on was installed or enabled receives the UI without a refresh.
+- The exact `Origin` / `Sec-Fetch-Site` / `Referer` headers sent by the isolated-world `fetch` to `page_data/*` and `/preview`, and whether GitHub accepts them identically to Chromium.
+- Copy Markdown, resolve, `/preview` rendering, and the installed (signed, non-temporary) add-on across a Firefox restart.
+
+**Firefox for Android**
+
+- `gecko_android.strict_min_version` is `142.0` (the first Android release that honours `data_collection_permissions`).
+- Touch support is implemented with pointer events plus a `(hover: none)` always-visible `+`; it is covered by Chromium touch-emulation e2e specs only and is **unverified on a real device**.
+- Sidebar resize by touch is not supported (the resize handle is CSS `resize: both`, mouse-only in every browser).
+
+**Signing and install**
+
+`npm run sign:firefox -- --source-dir extensions/github` submits an unlisted build to AMO (needs `WEB_EXT_API_KEY` (the AMO "JWT issuer") and `WEB_EXT_API_SECRET` (the "JWT secret") in the environment) and writes the signed `.xpi` to `web-ext-artifacts/`. Install it from `about:addons` → gear → Install Add-on From File.
+
 ## Debugging recipes
 
 All extension logs are prefixed `[GRDC]`. Useful queries in DevTools:

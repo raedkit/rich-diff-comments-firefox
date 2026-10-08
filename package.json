@@ -10,10 +10,17 @@
     "test:e2e:github": "playwright test",
     "test:e2e:ado": "playwright test --config=playwright.ado.config.js",
     "test:e2e:all": "npm run test:e2e:github && npm run test:e2e:ado",
-    "test:all": "npm test && npm run test:e2e:all"
+    "test:e2e:firefox": "playwright test --project=firefox && playwright test --config=playwright.ado.config.js --project=firefox",
+    "test:all": "npm test && npm run test:e2e:all",
+    "sync": "node scripts/dev-sync.js",
+    "package": "node scripts/package.js",
+    "preflight": "node .github/skills/rdc-publish-check/scripts/preflight.js",
+    "lint:firefox": "web-ext lint",
+    "sign:firefox": "web-ext sign --channel unlisted"
   },
   "devDependencies": {
     "@playwright/test": "^1.49.0",
-    "jsdom": "^25.0.1"
+    "jsdom": "^25.0.1",
+    "web-ext": "10.7.0"
   }
 }

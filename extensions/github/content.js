@@ -1543,10 +1543,18 @@
     return topUnderlinedAncestor(element) || element;
   }
 
-  // Tracks an in-progress range selection (mousedown on `+` → mouseup on
+  // Tracks an in-progress range selection (pointerdown on `+` → pointerup on
   // another `+`). Matches GitHub's source-diff gesture: drag the `+` icon
-  // from the start line down to the end line.
-  let dragAnchor = null; // { element, info } or null
+  // from the start line down to the end line. Pointer events cover mouse,
+  // touch and pen with one code path.
+  let dragAnchor = null; // { element, info, pointerId, startX, startY, isDragging } or null
+  const DRAG_THRESHOLD_PX = 4;
+  // Set briefly after a drag completes so the `click` that some browsers
+  // still synthesize doesn't also open a single-line box.
+  let dragJustCompleted = false;
+  // `+` button → the block it belongs to, so a release over a `+` resolves to
+  // exactly that block instead of guessing from the DOM around it.
+  const commentBtnTargets = new WeakMap();
 
   function attachCommentButtons() {
     // Remove existing buttons first
@@ -1568,64 +1576,34 @@
       btn.innerHTML = '<svg viewBox="0 0 14 14" aria-hidden="true" focusable="false"><path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
       btn.title = `Comment on ${info.path}:${info.line}\nDrag down to another + to comment on a range`;
 
-      // Range gesture: mousedown records the anchor, mouseup on another `+`
-      // opens a range box. Plain click (mousedown + mouseup on the same `+`)
-      // falls through to a single-line box via the click handler below.
-      btn.addEventListener('mousedown', (e) => {
-        if (e.button !== 0) return; // left button only
-        dragAnchor = { element, info };
-        // No tinting yet — set on the first mouseover of a different `+`.
-      });
+      commentBtnTargets.set(btn, { element, info });
 
-      btn.addEventListener('mouseup', (e) => {
-        if (e.button !== 0) return;
-        if (!dragAnchor) return;
-        // mouseup on the same button = ordinary click; let the click handler take it.
-        if (dragAnchor.element === element) return;
-        // Different file? Bail — GitHub doesn't allow cross-file ranges.
-        if (dragAnchor.info.path !== info.path) {
-          clearDragHover();
-          dragAnchor = null;
-          return;
-        }
-        e.stopPropagation();
-        e.preventDefault();
-        const startInfo = dragAnchor.info;
-        const startEl = dragAnchor.element;
-        const endInfo = info;
-        const endEl = element;
-        clearDragHover();
-        dragAnchor = null;
-        // Normalize so start <= end.
-        const startLine = Math.min(startInfo.line, endInfo.line);
-        const endLine = Math.max(startInfo.line, endInfo.line);
-        const anchorEl = startInfo.line <= endInfo.line ? startEl : endEl;
-        openCommentBox(anchorEl, {
-          path: info.path,
-          line: endLine,
-          startLine: startLine,
-        });
-      });
-
-      // Hover preview while dragging: highlight every mapped block between
-      // the anchor line and the currently-hovered `+` line (inclusive). This
-      // gives the same "yellow band" visualization GitHub's source-diff uses
-      // when you drag down to extend a range.
-      btn.addEventListener('mouseenter', () => {
-        if (dragAnchor && dragAnchor.info.path === info.path) {
-          paintRangeHover(dragAnchor.info.line, info.line, info.path);
-        }
+      // Range gesture: pointerdown records the anchor; the document-level
+      // pointermove / pointerup handlers below paint and complete the range
+      // (they hit-test with elementFromPoint because touch pointers are
+      // implicitly captured by this button). A plain tap/click falls through
+      // to a single-line box via the click handler below.
+      btn.addEventListener('pointerdown', (e) => {
+        if (e.button !== 0) return; // primary button / touch contact only
+        dragAnchor = {
+          element,
+          info,
+          pointerId: e.pointerId,
+          startX: e.clientX,
+          startY: e.clientY,
+          isDragging: false,
+        };
+        // No tinting yet — set once the pointer moves past the threshold.
       });
 
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        // If we just finished a drag (different start vs. end), mouseup already
-        // handled it. Plain click only opens single-line.
-        if (dragAnchor && dragAnchor.element !== element) {
-          dragAnchor = null;
+        // If we just finished a drag (different start vs. end), pointerup
+        // already handled it. Plain click only opens single-line.
+        if (dragJustCompleted) {
+          dragJustCompleted = false;
           return;
         }
-        dragAnchor = null;
         // For <pre> code blocks, the button may have been slid vertically to
         // follow the cursor; the resolved line lives on the button's dataset.
         // Override info.line with that value so the comment box opens on the
@@ -1746,48 +1724,62 @@
     return null;
   }
 
-  // Document-level mouseup: also fires when the user releases anywhere on a
-  // rendered block (not just on a `+` button). Resolves the release target
-  // to its mapped block and opens the range box. Falls through to cancel if
-  // the release target isn't in any mapped block.
-  document.addEventListener('mouseup', (e) => {
-    if (!dragAnchor) return;
-    // The `+` mouseup handler already handles `+` → `+`. Skip if release is
-    // on a `+` (it stopped the event itself, but be defensive).
-    if (e.target instanceof Element && e.target.closest('.grdc-comment-btn')) {
-      return;
-    }
-    const hit = findMappedBlockFromTarget(e.target);
-    if (hit && hit.info.path === dragAnchor.info.path && hit.element !== dragAnchor.element) {
-      const startInfo = dragAnchor.info;
-      const startEl = dragAnchor.element;
-      clearDragHover();
-      dragAnchor = null;
-      const startLine = Math.min(startInfo.line, hit.info.line);
-      const endLine = Math.max(startInfo.line, hit.info.line);
-      const anchorEl = startInfo.line <= hit.info.line ? startEl : hit.element;
-      openCommentBox(anchorEl, {
-        path: hit.info.path,
-        line: endLine,
-        startLine: startLine,
-      });
-      return;
-    }
-    // Released outside any mapped block → cancel.
-    setTimeout(() => {
-      clearDragHover();
-      dragAnchor = null;
-    }, 0);
-  });
+  // Resolve the block under a viewport point: a `+` button maps to its own
+  // block, otherwise walk up from whatever is there to a mapped block. Uses
+  // elementFromPoint because touch pointers are captured by the `+` they
+  // started on, so event.target never reflects where the finger is.
+  function resolveDragTarget(x, y) {
+    const el = document.elementFromPoint(x, y);
+    if (!el) return null;
+    const btn = el.closest('.grdc-comment-btn');
+    if (btn && commentBtnTargets.has(btn)) return commentBtnTargets.get(btn);
+    return findMappedBlockFromTarget(el);
+  }
 
-  // Track range hover during the drag wherever the cursor is, not only on
+  function cancelDrag() {
+    clearDragHover();
+    dragAnchor = null;
+  }
+
+  // Track range hover during the drag wherever the pointer is, not only on
   // `+` buttons. Updates the yellow highlight band live while the user drags
   // through prose.
-  document.addEventListener('mousemove', (e) => {
-    if (!dragAnchor) return;
-    const hit = findMappedBlockFromTarget(e.target);
+  document.addEventListener('pointermove', (e) => {
+    if (!dragAnchor || e.pointerId !== dragAnchor.pointerId) return;
+    if (!dragAnchor.isDragging) {
+      if (Math.hypot(e.clientX - dragAnchor.startX, e.clientY - dragAnchor.startY) < DRAG_THRESHOLD_PX) return;
+      dragAnchor.isDragging = true;
+    }
+    const hit = resolveDragTarget(e.clientX, e.clientY);
     if (!hit || hit.info.path !== dragAnchor.info.path) return;
     paintRangeHover(dragAnchor.info.line, hit.info.line, hit.info.path);
+  });
+
+  // Releasing anywhere on a rendered block (not just on a `+` button)
+  // completes the range. Releasing outside any mapped block, in another file,
+  // or on the anchor itself cancels; the latter then falls through to the
+  // button's click handler as an ordinary single-line comment.
+  document.addEventListener('pointerup', (e) => {
+    if (!dragAnchor || e.pointerId !== dragAnchor.pointerId) return;
+    const anchor = dragAnchor;
+    cancelDrag();
+    if (!anchor.isDragging) return;
+    const hit = resolveDragTarget(e.clientX, e.clientY);
+    if (!hit || hit.info.path !== anchor.info.path || hit.element === anchor.element) return;
+    dragJustCompleted = true;
+    setTimeout(() => { dragJustCompleted = false; }, 300);
+    const startLine = Math.min(anchor.info.line, hit.info.line);
+    const endLine = Math.max(anchor.info.line, hit.info.line);
+    const anchorEl = anchor.info.line <= hit.info.line ? anchor.element : hit.element;
+    openCommentBox(anchorEl, {
+      path: hit.info.path,
+      line: endLine,
+      startLine: startLine,
+    });
+  });
+
+  document.addEventListener('pointercancel', (e) => {
+    if (dragAnchor && e.pointerId === dragAnchor.pointerId) cancelDrag();
   });
 
   // ── UI: Section Collapse ──────────────────────────────────────────────────
@@ -3257,17 +3249,24 @@
   // `{left, top}` in viewport coordinates. We clamp to keep at least 80px
   // of the header on-screen so a window resize can't strand the sidebar.
   function attachSidebarDrag(sidebar, handle) {
+    // Pointer events so the same drag works for mouse, touch and pen. The
+    // mousedown guard keeps the old mouse behaviour: no text selection and no
+    // focus loss from a textarea when grabbing the header.
     handle.addEventListener('mousedown', (e) => {
+      if (!e.target.closest('button')) e.preventDefault();
+    });
+    handle.addEventListener('pointerdown', (e) => {
       // Ignore drags that start on a button (collapse / prev / next).
-      if (e.target.closest('button')) return;
-      e.preventDefault();
+      if (e.button !== 0 || e.target.closest('button')) return;
       const startX = e.clientX;
       const startY = e.clientY;
+      const pointerId = e.pointerId;
       const rect = sidebar.getBoundingClientRect();
       const startLeft = rect.left;
       const startTop = rect.top;
       sidebar.classList.add('grdc-sidebar-dragging');
       const onMove = (ev) => {
+        if (ev.pointerId !== pointerId) return;
         const { left, top } = clampDragPos(
           { left: startLeft, top: startTop, width: rect.width },
           { dx: ev.clientX - startX, dy: ev.clientY - startY },
@@ -3281,9 +3280,11 @@
         // the sidebar) so the explicit `left` from the drag wins.
         sidebar.style.transform = 'none';
       };
-      const onUp = () => {
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup', onUp);
+      const onUp = (ev) => {
+        if (ev.pointerId !== pointerId) return;
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup', onUp);
+        document.removeEventListener('pointercancel', onUp);
         sidebar.classList.remove('grdc-sidebar-dragging');
         try {
           localStorage.setItem(SIDEBAR_POS_KEY, JSON.stringify({
@@ -3292,8 +3293,9 @@
           }));
         } catch (_) {}
       };
-      document.addEventListener('mousemove', onMove);
-      document.addEventListener('mouseup', onUp);
+      document.addEventListener('pointermove', onMove);
+      document.addEventListener('pointerup', onUp);
+      document.addEventListener('pointercancel', onUp);
     });
   }
 

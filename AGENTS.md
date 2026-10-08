@@ -1,6 +1,6 @@
 # Agent context: Markdown PR Comments for GitHub and Azure DevOps
 
-Two Chromium browser-extension targets add inline review-comment UI to GitHub PR rich diff and Azure DevOps PR Preview. **Source of truth is here** (`c:\Local\local_repos\rich-diff-comments\`). A snapshot mirror lives at `content-understanding/tools/github-rich-diff-comments/` — **don't edit that copy**.
+Two browser-extension targets (Chromium and Firefox, from the same manifests) add inline review-comment UI to GitHub PR rich diff and Azure DevOps PR Preview. **Source of truth is here** (`c:\Local\local_repos\rich-diff-comments\`). A snapshot mirror lives at `content-understanding/tools/github-rich-diff-comments/` — **don't edit that copy**.
 
 ## Instructions
 
@@ -30,10 +30,11 @@ Every entry in `CHANGELOG.md` or `CHANGELOG_ADO.md` (and the equivalent blocks i
 The repository is a monorepo with per-target extension folders sharing a single source of truth for pure logic.
 
 - **`src/lib/`** — DOM-agnostic pure helpers (source of truth). Shared across every extension target. Tests import from here.
-- **`extensions/github/`** — the GitHub extension: `manifest.json`, `content.js`, `styles.css`, `icons/`, plus `src/lib/*.js` and `PRIVACY.md` mirrored in by `scripts/dev-sync.ps1`. **Chrome / Edge load unpacked from this folder.**
+- **`extensions/github/`** — the GitHub extension: `manifest.json`, `content.js`, `styles.css`, `icons/`, plus `src/lib/*.js` and `PRIVACY.md` mirrored in by `npm run sync -- --target github`. **Chrome / Edge load unpacked from this folder; Firefox loads it with `npx web-ext run --source-dir extensions/github`.**
 - **`extensions/ado/`** — the Azure DevOps extension and adapter mirror. See [docs/ado/FEATURES.md](docs/ado/FEATURES.md) and [docs/ado/ADO_ADAPTER_PLAN.md](docs/ado/ADO_ADAPTER_PLAN.md).
-- **`scripts/dev-sync.ps1 -Target github`** — copies shared files from repo root into a target folder. Runs automatically before `package.ps1` and `preflight.ps1`. Re-run manually after editing anything under `src/lib/` if Chrome has the extension dev-loaded, then reload the extension.
-- **`scripts/package.ps1 -Target github|ado`** — builds a publish-ready zip from `extensions/<target>/`. Default target is `github`.
+- **`npm run sync -- --target github`** (`scripts/dev-sync.js`) — copies shared files from repo root into a target folder. Runs automatically before `npm run package` and `npm run preflight`. Re-run manually after editing anything under `src/lib/` if Chrome has the extension dev-loaded, then reload the extension.
+- **`npm run package -- --target github|ado`** (`scripts/package.js`) — builds a publish-ready zip from `extensions/<target>/` with `web-ext build`. Default target is `github`.
+- **`npm run sign:firefox -- --source-dir extensions/<target>`** — signs an unlisted Firefox `.xpi` into the git-ignored `web-ext-artifacts/`; needs `WEB_EXT_API_KEY` / `WEB_EXT_API_SECRET` in the environment (never commit them).
 - **`extensions/*/src/`** and **`extensions/*/PRIVACY.md`** are git-ignored — they're build output.
 
 ### Tests
@@ -41,18 +42,19 @@ The repository is a monorepo with per-target extension folders sharing a single 
 - `npm test` — 410 Node:test unit/static tests (no browser). Run before every commit touching JS.
 - `npm run test:e2e` / `npm run test:e2e:github` — 21 GitHub fixture tests in headless Chromium.
 - `npm run test:e2e:ado` — 63 ADO Preview + mocked REST fixture tests in headless Chromium.
-- `npm run test:e2e:all` — both browser targets.
+- `npm run test:e2e:all` — both browser targets, each in Chromium and Firefox (`npx playwright install chromium firefox` once).
+- `npm run test:e2e:firefox` — Firefox project only.
 - `npm run test:all` — Node tests plus both browser targets.
-- Preflight (`.github/skills/rdc-publish-check/scripts/preflight.ps1`) runs `npm test` only — add `test:e2e` to your manual flow when DOM behavior changed.
+- Preflight (`npm run preflight -- --target github|ado`, i.e. `.github/skills/rdc-publish-check/scripts/preflight.js`) runs `npm test` and `web-ext lint` only — add `test:e2e` to your manual flow when DOM behavior changed.
 
 ### What ships vs. what stays local
 
-The published zip is built by [scripts/package.ps1](scripts/package.ps1) (`-Target github` by default) from `extensions/github/`. That folder contains:
+The published zip is built by [scripts/package.js](scripts/package.js) (`--target github` by default) from `extensions/github/`. That folder contains:
 
 - **Physical files** (moved here from repo root during the refactor): `manifest.json`, `content.js`, `styles.css`, `icons/`.
-- **Mirrored files** (copied in by `scripts/dev-sync.ps1` from repo-root source-of-truth): `src/lib/*.js`, `PRIVACY.md`.
+- **Mirrored files** (copied in by `scripts/dev-sync.js` from repo-root source-of-truth): `src/lib/*.js`, `PRIVACY.md`.
 
-`package.ps1` runs dev-sync automatically before zipping, so the shipped bundle is always in sync with the source. Everything else (`node_modules/`, `package.json`, `tests/`, `docs/`, `playwright.config.js`, `.github/`, `local-only/`, the repo-root `src/`) is naturally excluded because it lives outside `extensions/github/`; preflight's `-VerifyZip` mode also has a forbidden-paths denylist as a safety net. The extension ships **zero runtime npm dependencies** — `jsdom` and `@playwright/test` are dev-only.
+`package.js` runs dev-sync automatically before zipping, so the shipped bundle is always in sync with the source. Everything else (`node_modules/`, `package.json`, `tests/`, `docs/`, `playwright.config.js`, `.github/`, `local-only/`, the repo-root `src/`) is naturally excluded because it lives outside `extensions/github/`; preflight's `--verify-zip` mode also has a forbidden-paths denylist as a safety net. The extension ships **zero runtime npm dependencies** — `jsdom` and `@playwright/test` are dev-only.
 
 ### Skills
 

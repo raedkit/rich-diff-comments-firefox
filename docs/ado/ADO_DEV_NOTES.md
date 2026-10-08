@@ -47,6 +47,27 @@ Manifest must declare `"world": "MAIN"`:
 
 Without this, `window.ADORC_probe` is invisible to the default DevTools console context (isolated world). Trade-off: the content script shares scope with the page's JS, which is fine because our namespace (`ADORC`, `ADRC`, `adrc-`) doesn't collide with anything ADO uses.
 
+## Firefox
+
+Firefox support (ADO 1.5.0) changed only manifest metadata (`browser_specific_settings.gecko` / `gecko_android`) and the pointer/touch handling. The `"world": "MAIN"` and `run_at: "document_end"` content-script entry is unchanged; Firefox supports `world: "MAIN"` from version 128, and `strict_min_version` is `140.0`.
+
+**Not yet verified in a running Firefox** (nothing about ADO in Firefox has been observed; the points below are open questions, not findings)
+
+- Whether the shared `styles.css` is applied for the MAIN-world entry (Firefox source suggests `css` is injected independently of `world`).
+- Comment, reply, threads sidebar, Outline, Copy link, and the React-props tree activation path against a live ADO organization.
+- Whether an ADO PR tab that was already open at install time receives the UI without a refresh.
+
+The Playwright ADO suite runs in Firefox as well as Chromium, but it injects scripts into fixtures, so it does not exercise manifest injection.
+
+**Firefox for Android**
+
+- `gecko_android.strict_min_version` is `142.0`.
+- Touch support (always-visible `+` under `(hover: none)`, pointer-event drag) is covered by Chromium touch-emulation e2e specs only and is **unverified on a real device**.
+
+**Signing and install**
+
+`npm run sign:firefox -- --source-dir extensions/ado` needs `WEB_EXT_API_KEY` (the AMO "JWT issuer") and `WEB_EXT_API_SECRET` (the "JWT secret") in the environment and writes the signed `.xpi` to `web-ext-artifacts/`.
+
 ## REST API version pinning
 
 **Most endpoints work on `api-version=7.1`.** The exception:

@@ -45,12 +45,12 @@ Priority applies to the shared user outcome:
 
 The targets version and release independently. These lists summarize the intended scope of each next release; the detailed shared outcomes and per-target statuses remain defined once in the roadmap sections below.
 
-### Azure DevOps v1.5.0
+### Azure DevOps v1.6.0
 
 - [ ] **Remove full sidebar dismissal and its restore launcher** — keep the sidebar's discoverable collapse/expand behavior instead of allowing it to enter a fully hidden state. Preserve the existing keyboard toggle and saved layout preferences.
 - [ ] **Collapse or expand all inline conversations** — add a Threads-toolbar toggle scoped to the current Markdown Preview while keeping comment badges and markers visible.
 
-### GitHub v1.13.0
+### GitHub v1.14.0
 
 - [ ] **Collapse or expand all inline conversations** — add a Threads-toolbar toggle across all currently rendered Markdown files while keeping comment badges and markers visible.
 
@@ -68,6 +68,7 @@ The targets version and release independently. These lists summarize the intende
 | Keep the comment button aligned with the selected rendered line | ✅ | ✅ ADO v1.2.0 |
 | Show new comments inline immediately without a manual refresh | ✅ | ✅ |
 | Use the signed-in browser session without requiring a PAT | ✅ | ✅ |
+| Run in Firefox 140+ and use touch input (Android 142+) | ✅ GitHub v1.13.0 (desktop confirmed on Floorp; Android not yet verified on a device) | △ ADO v1.5.0 (ships Firefox-ready; not yet verified in a live Firefox) |
 
 ### Threads and editor
 
@@ -173,8 +174,8 @@ The targets version and release independently. These lists summarize the intende
 
 - [ ] **P2 — Collapse or expand all inline conversations**
   - **Outcome:** reviewers can return a comment-heavy rendered document to a compact reading view in one action, then reopen every conversation when needed.
-  - **GitHub:** 📋 Targeted for GitHub v1.13.0. Apply the action across all currently rendered Markdown files in the pull request.
-  - **ADO:** 📋 Targeted for ADO v1.5.0. Apply the action to the current Markdown Preview, matching ADO's one-file-at-a-time review surface.
+  - **GitHub:** 📋 Targeted for GitHub v1.14.0. Apply the action across all currently rendered Markdown files in the pull request.
+  - **ADO:** 📋 Targeted for ADO v1.6.0. Apply the action to the current Markdown Preview, matching ADO's one-file-at-a-time review surface.
   - **Acceptance:** place a **Collapse all conversations** / **Expand all conversations** toggle in the Threads toolbar; collapse only conversation bodies while keeping badges, table-row markers, code-line markers, and the Threads list visible. Do not change resolution state, the unresolved filter, or saved sidebar preferences.
 
 - [ ] **P3 — Expose host-authorized moderation actions only when safely supported**
@@ -212,7 +213,7 @@ The targets version and release independently. These lists summarize the intende
 - [ ] **P2 — Use discoverable sidebar collapse instead of full dismissal**
   - **Outcome:** reviewers can reclaim page space without creating a fully hidden state that is difficult to discover or recover from.
   - **GitHub:** ✅ The existing collapse control and `t` shortcut provide the intended outcome; do not add a full-dismiss button or separate launcher.
-  - **ADO:** 📋 Targeted for ADO v1.5.0. Remove the header × full-dismiss action and separate restore launcher, keeping collapse/expand as the sole space-saving behavior.
+  - **ADO:** 📋 Targeted for ADO v1.6.0. Remove the header × full-dismiss action and separate restore launcher, keeping collapse/expand as the sole space-saving behavior.
   - **Constraint:** preserve the existing keyboard toggle and saved position, size, active tab, filter, and collapsed state. Removing full dismissal must not reset the reviewer's sidebar layout.
 
 - [ ] **P3 — Evaluate active-file prioritization during startup**

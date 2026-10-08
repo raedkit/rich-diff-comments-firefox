@@ -2,7 +2,7 @@
  * Azure DevOps adapter for the Markdown PR Comments extension.
  *
  * This file is the SOURCE OF TRUTH. It's mirrored into
- * `extensions/ado/src/adapters/ado.js` by `scripts/dev-sync.ps1` at
+ * `extensions/ado/src/adapters/ado.js` by `scripts/dev-sync.js` at
  * build / dev-load time.
  *
  * Wraps the ADO REST API surface for PR review comments and changed-file

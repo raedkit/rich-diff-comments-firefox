@@ -120,3 +120,21 @@ test('opacity transition: default `.grdc-comment-btn` is hidden, `.grdc-hoverabl
     'Hover must reveal the + via `.grdc-hoverable:hover > .grdc-comment-btn { opacity: 1 }`.'
   );
 });
+
+for (const [target, prefix] of [['github', 'grdc'], ['ado', 'adrc']]) {
+  const targetCss = fs.readFileSync(path.join(__dirname, '..', 'extensions', target, 'styles.css'), 'utf8');
+
+  test(`${target}: the + is always visible on touch screens (hover: none)`, () => {
+    const block = targetCss.match(/@media \(hover: none\) \{([\s\S]*?)\n\}/);
+    assert.ok(block, 'styles.css must have an `@media (hover: none)` block');
+    assert.match(block[1], new RegExp(`\\.${prefix}-comment-btn`));
+    assert.match(block[1], /opacity:\s*0\.6/);
+    // The deepest-block hide rule must not win on touch, where :hover sticks.
+    assert.match(block[1], new RegExp(`\\.${prefix}-hoverable:has\\(\\.${prefix}-hoverable:hover\\)\\s*>\\s*\\.${prefix}-comment-btn`));
+  });
+
+  test(`${target}: the + and the sidebar header opt out of browser touch scrolling`, () => {
+    assert.match(targetCss, new RegExp(`\\.${prefix}-comment-btn\\s*\\{[^}]*touch-action:\\s*none`));
+    assert.match(targetCss, new RegExp(`\\.${prefix}-sidebar-header\\s*\\{[^}]*touch-action:\\s*none`));
+  });
+}

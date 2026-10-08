@@ -4,6 +4,13 @@ All notable user-visible changes to the Azure DevOps browser extension are recor
 
 ## [Unreleased]
 
+## [1.5.0] — 2026-10-08
+
+### Added
+
+- **Works in Firefox (version 140 or newer)** with the same features as in Chrome and Edge.
+- **Touch screens are supported, including Firefox for Android.** The + button is always visible, one tap starts a comment, dragging from one + to another selects a range, and the sidebar header can be dragged by touch.
+
 ## [1.4.0] — 2026-09-23
 
 ### Added

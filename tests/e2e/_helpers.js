@@ -39,7 +39,7 @@ const CONTENT_SCRIPTS = MANIFEST.content_scripts[0].js; // in manifest order
 // `src/lib/*.js` files live at the repo root as the single source of truth;
 // extension-specific files (content.js, styles.css, icons) live under
 // extensions/github/. This mirrors what Chrome sees at runtime because
-// scripts/dev-sync.ps1 copies the shared files into extensions/github/
+// scripts/dev-sync.js copies the shared files into extensions/github/
 // before the extension is loaded — but reading them from the source lets
 // the e2e suite run without dev-sync having been executed first.
 function resolveScriptPath(scriptPath) {
