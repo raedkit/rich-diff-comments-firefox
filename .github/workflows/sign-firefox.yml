@@ -1,0 +1,49 @@
+name: Sign Firefox build
+
+# Signs both extensions as unlisted Firefox add-ons and attaches the .xpi files
+# to a GitHub release. Needs repo secrets WEB_EXT_API_KEY and WEB_EXT_API_SECRET.
+# Runs when a release is published, or by hand for an existing tag.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to attach the .xpi files to (e.g. v1.13.0)
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  sign:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [github, ado]
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+      WEB_EXT_API_KEY: ${{ secrets.WEB_EXT_API_KEY }}
+      WEB_EXT_API_SECRET: ${{ secrets.WEB_EXT_API_SECRET }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run sync -- --target ${{ matrix.target }}
+      - run: npm run sign:firefox -- --source-dir extensions/${{ matrix.target }} --artifacts-dir web-ext-artifacts
+      - name: Name and upload
+        run: |
+          version=$(node -p "require('./extensions/${{ matrix.target }}/manifest.json').version")
+          mv web-ext-artifacts/*.xpi "markdown-pr-${{ matrix.target }}-${version}.xpi"
+          gh release upload "$TAG" markdown-pr-${{ matrix.target }}-*.xpi --clobber
+      - uses: actions/upload-artifact@v4
+        with:
+          name: xpi-${{ matrix.target }}
+          path: markdown-pr-${{ matrix.target }}-*.xpi
