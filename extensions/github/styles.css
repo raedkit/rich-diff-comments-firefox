@@ -209,15 +209,6 @@ li.grdc-hoverable .grdc-comment-btn {
   }
 }
 
-/* On a phone-width page the usual `left: -30px` gutter falls off-screen, so
-   overlay the `+` on the block's left edge instead. Cells and list items keep
-   their own, more specific positions above. */
-@media (hover: none) and (max-width: 767px) {
-  .grdc-comment-btn {
-    left: 2px;
-  }
-}
-
 /* ── Section collapse toggle (on headings H1–H6) ──────────────────────── */
 
 .grdc-collapsible {
